@@ -1,0 +1,23 @@
+# Individual Python packages
+anytree
+hjson
+mako
+ninja
+# pyyaml
+wheel
+packaging
+edalize
+fusesoc
+
+# -r ./config/gen_from_riscv_config/requirements.txt
+# -r ./core/cache_subsystem/hpdcache/docs/requirements.txt
+# -r ./corev_apu/fpga/src/gpio/requirements.txt
+# -r ./docs/requirements.txt
+# -r ./vendor/riscv/riscv-config/docs/requirements.txt
+# -r ./vendor/riscv/riscv-config/requirements.txt
+# -r ./verif/core-v-verif/bin/requirements.txt
+# -r ./verif/core-v-verif/docs/VerifStrat/requirements.txt
+# -r ./verif/core-v-verif/tools/vptool/vptool/requirements.txt
+# -r ./verif/docs/VerifPlans/requirements.txt
+-r ./verif/sim/dv/requirements.txt
+
