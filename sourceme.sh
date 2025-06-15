@@ -12,8 +12,14 @@ VENV_REQS=${THIS_DIR}/${PYREQS_FILE}
 VENV_NAME=$(basename ${THIS_DIR})
 export VENV_ACT=${VENV_DIR}/bin/activate
 
+# Ariane repo
+export ARIANE=${THIS_DIR}
+
 # Toolchain directory
 export RISCV=/opt/ariane/ariane-toolchain-20250309
+
+# Questa support
+export QUESTA_HOME=/opt/intelFPGA_pro/24.2/questa_fse
 
 # ########################
 # ## Helper functions   ##
@@ -58,6 +64,13 @@ function venv_setup() {
 
 # Create the venv if it does not already exist and/or activate it
 venv_setup
+
+# Add Questasim to the path
+prepend_path_unique ${QUESTA_HOME}/bin
+
+# Add custom local tools to the path (to override system versions)
+prepend_path_unique ${ARIANE}/tools/verilator/bin
+prepend_path_unique ${ARIANE}/tools/spike/bin
 
 # Return to setup dir
 cd ${THIS_DIR}
