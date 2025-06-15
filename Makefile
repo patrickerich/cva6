@@ -855,3 +855,11 @@ clean-altera: clean
 	check-benchmarks check-asm-tests                                          \
 	torture-gen torture-itest torture-rtest                                   \
 	run-torture run-torture-verilator check-torture check-torture-verilator
+
+# Questa simulation target
+questa-sim: $(VSIM_SCRIPTS)
+	@echo "[Questa] Building and running simulation"
+	vsim -c -do "do scripts/questa/compile.tcl; do scripts/questa/run.tcl $(elf_file) $(issrun_opts)" \
+	-work $(VSIM_WORK) \
+	-logfile $(report_file).log \
+	-wlf $(report_file).wlf
