@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Use gcc-toolset-13
-source /opt/rh/gcc-toolset-13/enable
+# # Use gcc-toolset-13
+# source /opt/rh/gcc-toolset-13/enable
 
 # Python virtual environment
 PYEXE=python3.12
@@ -12,14 +12,20 @@ VENV_REQS=${THIS_DIR}/${PYREQS_FILE}
 VENV_NAME=$(basename ${THIS_DIR})
 export VENV_ACT=${VENV_DIR}/bin/activate
 
-# Ariane repo
-export ARIANE=${THIS_DIR}
+# Ariane directories
+export ARIANE_WORK=${THIS_DIR}
+export ARIANE_TOOLS=/opt/ariane
+export ARIANE_RISCV=${ARIANE_TOOLS}/riscv
+export ARIANE_VERILATOR=${ARIANE_TOOLS}/verilator
+export ARIANE_SPIKE=${ARIANE_TOOLS}/spike
 
-# Toolchain directory
-export RISCV=/opt/ariane/ariane-toolchain-20250309
+# ARIANE TOOLS INSTALLATION DIRECTORIES
+export RISCV=${ARIANE_RISCV}
+export VERILATOR_INSTALL_DIR=${ARIANE_VERILATOR}
+export SPIKE_INSTALL_DIR=${ARIANE_SPIKE}
 
-# Questa support
-export QUESTA_HOME=/opt/intelFPGA_pro/24.2/questa_fse
+# Safe default simulation parameters
+export DV_SIMULATORS=veri-testharness
 
 # ########################
 # ## Helper functions   ##
@@ -65,12 +71,15 @@ function venv_setup() {
 # Create the venv if it does not already exist and/or activate it
 venv_setup
 
-# Add Questasim to the path
-prepend_path_unique ${QUESTA_HOME}/bin
-
 # Add custom local tools to the path (to override system versions)
-prepend_path_unique ${ARIANE}/tools/verilator/bin
-prepend_path_unique ${ARIANE}/tools/spike/bin
+prepend_path_unique ${ARIANE_RISCV}/bin
+prepend_path_unique ${ARIANE_VERILATOR}/bin
+prepend_path_unique ${ARIANE_SPIKE}/bin
+
+# Setup CVA6 environment variables
+source ${THIS_DIR}/verif/sim/setup-env.sh
 
 # Return to setup dir
 cd ${THIS_DIR}
+
+
