@@ -1270,6 +1270,7 @@ xlnx_protocol_checker i_xlnx_protocol_checker (
 assign dram.r_user = '0;
 assign dram.b_user = '0;
 
+`ifndef AXKU5
 xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_aclk     ( clk              ),
   .s_axi_aresetn  ( ndmreset_n       ),
@@ -1300,7 +1301,7 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_arsize   ( dram.ar_size     ),
   .s_axi_arburst  ( dram.ar_burst    ),
   .s_axi_arlock   ( dram.ar_lock     ),
-  .s_axi_arcache  ( dram.ar_cache    ),
+  .s_axi_arcache  ( dram.arcache     ),
   .s_axi_arprot   ( dram.ar_prot     ),
   .s_axi_arregion ( dram.ar_region   ),
   .s_axi_arqos    ( dram.ar_qos      ),
@@ -1355,6 +1356,91 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .m_axi_rvalid   ( s_axi_rvalid     ),
   .m_axi_rready   ( s_axi_rready     )
 );
+`else
+// -----------------------------------------------------------------------------
+// AXKU5: BRAM-backed "DRAM" in core clock domain
+// -----------------------------------------------------------------------------
+localparam int unsigned AXKU5_DRAM_WORDS = 2**18; // 2 MiB @ 64-bit
+localparam int unsigned AXKU5_DRAM_AW    = $clog2(AXKU5_DRAM_WORDS);
+
+logic                      axku5_mem_req;
+logic                      axku5_mem_we;
+logic [AxiAddrWidth-1:0]   axku5_mem_addr;
+logic [AxiDataWidth/8-1:0] axku5_mem_be;
+logic [AxiDataWidth-1:0]   axku5_mem_wdata;
+logic [AxiDataWidth-1:0]   axku5_mem_rdata;
+
+axi2mem #(
+    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
+    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+    .AXI_DATA_WIDTH ( AxiDataWidth     ),
+    .AXI_USER_WIDTH ( AxiUserWidth     )
+) i_axku5_axi2mem (
+    .clk_i  ( clk            ),
+    .rst_ni ( ndmreset_n     ),
+    .slave  ( dram           ),
+    .req_o  ( axku5_mem_req  ),
+    .we_o   ( axku5_mem_we   ),
+    .addr_o ( axku5_mem_addr ),
+    .be_o   ( axku5_mem_be   ),
+    .data_o ( axku5_mem_wdata ),
+    .data_i ( axku5_mem_rdata )
+);
+
+logic [AxiDataWidth-1:0]   axku5_dram_mem [0:AXKU5_DRAM_WORDS-1];
+logic [AXKU5_DRAM_AW-1:0]  axku5_mem_idx;
+
+// Use word-aligned addressing (ignore upper bits beyond implemented range)
+assign axku5_mem_idx = axku5_mem_addr[AXKU5_DRAM_AW+2:3];
+
+always_ff @(posedge clk or negedge ndmreset_n) begin
+  if (!ndmreset_n) begin
+    axku5_mem_rdata <= '0;
+  end else if (axku5_mem_req) begin
+    if (axku5_mem_we) begin
+      for (int i = 0; i < AxiDataWidth/8; i++) begin
+        if (axku5_mem_be[i]) begin
+          axku5_dram_mem[axku5_mem_idx][8*i +: 8] <= axku5_mem_wdata[8*i +: 8];
+        end
+      end
+    end
+    axku5_mem_rdata <= axku5_dram_mem[axku5_mem_idx];
+  end
+end
+`endif
+
+`ifdef AXKU5
+// -----------------------------------------------------------------------------
+// AXKU5 clocking:
+// - Buffer external differential system clock.
+// - Use buffered clock directly as core / peripheral clock.
+// - No external MIG UI clock; DRAM is BRAM in core clock domain.
+// -----------------------------------------------------------------------------
+logic sys_clk_ibuf;
+
+IBUFDS i_axku5_sys_clk_ibufds (
+  .I  ( sys_clk_p ),
+  .IB ( sys_clk_n ),
+  .O  ( sys_clk_ibuf )
+);
+
+BUFG i_axku5_core_clk_bufg (
+  .I ( sys_clk_ibuf ),
+  .O ( clk )
+);
+
+// Single clock domain for core, DRAM BRAM, and peripherals.
+assign ddr_clock_out  = clk;
+assign ddr_sync_reset = ~cpu_resetn;
+assign clk_200MHz_ref = clk;
+assign phy_tx_clk     = clk;
+assign eth_clk        = clk;
+assign sd_clk_sys     = clk;
+
+// Treat clock as "locked" once board reset is released.
+assign pll_locked = cpu_resetn;
+
+`else
 
 `ifdef NEXYS_VIDEO
 xlnx_clk_gen i_xlnx_clk_gen (
@@ -1381,6 +1467,7 @@ xlnx_clk_gen i_xlnx_clk_gen (
 );
 assign clk_200MHz_ref = ddr_clock_out;
 
+`endif
 `endif
 
 `ifdef KINTEX7
