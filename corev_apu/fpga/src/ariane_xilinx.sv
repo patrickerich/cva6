@@ -141,6 +141,14 @@ module ariane_xilinx (
   input  wire [7:0]    pci_exp_rxp     ,
   input  wire [7:0]    pci_exp_rxn     ,
   input  logic         trst_n          ,
+`elsif AXKU5
+  input  logic         sys_clk_p   ,
+  input  logic         sys_clk_n   ,
+  input  logic         cpu_resetn  ,
+  output logic [ 7:0]  led         ,
+  input  logic [ 7:0]  sw          ,
+  output logic         fan_pwm     ,
+  input  logic         trst_n      ,
 `elsif NEXYS_VIDEO
   input  logic         sys_clk_i   ,
   input  logic         cpu_resetn  ,
@@ -226,7 +234,7 @@ localparam type rvfi_probes_t = struct packed {
 
 // 24 MByte in 8 byte words
 localparam NumWords = (24 * 1024 * 1024) / 8;
-  
+
 // WARNING: If NBSlave is modified, Xilinx's IPs under fpga/xilinx need to be updated with the new AXI id width and regenerated.
 // Otherwise reads and writes to DRAM may be returned to the wrong master and the crossbar will freeze. See issue #568.
 localparam NBSlave = 2; // debug, ariane
@@ -297,6 +305,9 @@ assign cpu_resetn = ~cpu_reset;
 assign cpu_resetn = ~cpu_reset;
 assign trst_n = ~trst;
 `elsif NEXYS_VIDEO
+logic cpu_reset;
+assign cpu_reset  = ~cpu_resetn;
+`elsif AXKU5
 logic cpu_reset;
 assign cpu_reset  = ~cpu_resetn;
 `endif

@@ -86,6 +86,10 @@ else ifeq ($(BOARD), nexys_video)
 	XILINX_PART              := xc7a200tsbg484-1
 	XILINX_BOARD             := digilentinc.com:nexys_video:part0:1.1
 	CLK_PERIOD_NS            := 40
+else ifeq ($(BOARD), axku5)
+	XILINX_PART              := xcku5p-ffvb676-2-i
+	XILINX_BOARD             :=
+	CLK_PERIOD_NS            := 20
 else
 $(error Unknown board - please specify a supported FPGA board)
 endif
@@ -295,12 +299,12 @@ altera_filter := corev_apu/tb/ariane_testharness.sv \
 								corev_apu/riscv-dbg/src/dmi_jtag_tap.sv \
 								corev_apu/riscv-dbg/src/dmi_jtag.sv \
 								corev_apu/fpga/src/apb_uart/src/reg_uart_wrap.sv
-								
+
 altera_filter := $(addprefix $(root-dir), $(altera_filter))
 xil_debug_filter = $(addprefix $(root-dir), corev_apu/riscv-dbg/src/dm_obi_top.sv)
 xil_debug_filter += $(addprefix $(root-dir), corev_apu/riscv-dbg/src/dm_pkg.sv)
 xil_debug_filter += $(addprefix $(root-dir), corev_apu/riscv-dbg/src/dmi_vjtag_tap.sv)
-xil_debug_filter += $(addprefix $(root-dir), corev_apu/riscv-dbg/src/dmi_vjtag.sv)						
+xil_debug_filter += $(addprefix $(root-dir), corev_apu/riscv-dbg/src/dmi_vjtag.sv)
 src := $(filter-out $(xil_debug_filter), $(src))
 
 fpga_src += corev_apu/fpga/src/bootrom/bootrom_$(XLEN).sv
