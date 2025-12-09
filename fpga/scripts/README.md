@@ -34,6 +34,16 @@ openocd -f fpga/scripts/openocd.cfg
 
 This should start an OpenOCD server listening on `localhost:3333` for GDB connections.
 
+## Building FPGA bitstreams
+
+From the repository root you can build FPGA bitstreams using the top-level Makefile. For example, to build for the AXKU5 board with the CV64A6 IMAFDC SV39 configuration:
+
+```bash
+make fpga BOARD=axku5 target=cv64a6_imafdc_sv39
+```
+
+Replace `axku5` and the `target` as needed for other boards and configurations.
+
 ## Monitoring UART output (picocom / minicom)
 
 On AXKU5, the CVA6 SoC UART is connected to the on-board CP210x USB-UART bridge. After a reboot, the device enumeration can change, so you should verify which `/dev/ttyUSBx` corresponds to the CP210x.
@@ -45,12 +55,6 @@ Typical mapping (adjust as needed based on `lsusb` / `dmesg`):
 - `/dev/ttyUSB0` → Olimex JTAG
 
 ### Using picocom
-
-Install picocom if you do not have it:
-
-```bash
-sudo apt-get install picocom
-```
 
 Start picocom on the UART device (example for `/dev/ttyUSB2`):
 
@@ -87,10 +91,6 @@ Press `C-a` then `C-x` to exit picocom.
 ### Using minicom (optional)
 
 If you prefer minicom:
-
-```bash
-sudo apt-get install minicom
-```
 
 Start:
 
