@@ -79,5 +79,10 @@ prepend_path_unique ${ARIANE_SPIKE}/bin
 # Setup CVA6 environment variables
 source ${THIS_DIR}/verif/sim/setup-env.sh
 
+# Set some default environment variables for convenience
+export BOARD=axku5
+export XILINX_PART=xcku5p-ffvb676-2-i
+export XILINX_BOARD=
+
 # Return to setup dir
 cd ${THIS_DIR}

@@ -142,13 +142,15 @@ module ariane_xilinx (
   input  wire [7:0]    pci_exp_rxn     ,
   input  logic         trst_n          ,
 `elsif AXKU5
-  input  logic         sys_clk_p   ,
-  input  logic         sys_clk_n   ,
-  input  logic         cpu_resetn  ,
-  output logic [ 7:0]  led         ,
-  input  logic [ 7:0]  sw          ,
-  output logic         fan_pwm     ,
-  input  logic         trst_n      ,
+   input  logic         sys_clk_p   ,
+   input  logic         sys_clk_n   ,
+   input  logic         cpu_resetn  ,
+   // AXKU5: only 4 physical user LEDs are present.
+   output logic [ 3:0]  led         ,
+   // AXKU5: only 3 physical user keys are used as switches; map to sw[2:0].
+   input  logic [ 2:0]  sw          ,
+   output logic         fan_pwm     ,
+   input  logic         trst_n      ,
 `elsif NEXYS_VIDEO
   input  logic         sys_clk_i   ,
   input  logic         cpu_resetn  ,
@@ -182,29 +184,31 @@ module ariane_xilinx (
   output logic         fan_pwm     ,
   input  logic         trst_n      ,
 `endif
-  // SPI
-  output logic        spi_mosi    ,
-  input  logic        spi_miso    ,
-  output logic        spi_ss      ,
-  output logic        spi_clk_o   ,
-  // common part
- // input logic         trst_n      ,
-  input  logic        tck         ,
-  input  logic        tms         ,
-  input  logic        tdi         ,
-  output  wire         tdo         ,
-  input  logic        prog_clko   ,
-  input  logic        prog_rxen   ,
-  input  logic        prog_txen   ,
-  input  logic        prog_spien  ,
-  output logic        prog_rdn    ,
-  output logic        prog_wrn    ,
-  output logic        prog_oen    ,
-  output logic        prog_siwun  ,
-  inout  logic [7:0]  prog_d      ,
-  input  logic        rx          ,
-  output logic        tx
-);
+   // SPI
+   output logic        spi_mosi    ,
+   input  logic        spi_miso    ,
+   output logic        spi_ss      ,
+   output logic        spi_clk_o   ,
+   // common part
+  // input logic         trst_n      ,
+   input  logic        tck         ,
+   input  logic        tms         ,
+   input  logic        tdi         ,
+   output  wire         tdo         ,
+`ifndef AXKU5
+   input  logic        prog_clko   ,
+   input  logic        prog_rxen   ,
+   input  logic        prog_txen   ,
+   input  logic        prog_spien  ,
+   output logic        prog_rdn    ,
+   output logic        prog_wrn    ,
+   output logic        prog_oen    ,
+   output logic        prog_siwun  ,
+   inout  logic [7:0]  prog_d      ,
+`endif
+   input  logic        rx          ,
+   output logic        tx
+ );
 
 // CVA6 Xilinx configuration
 function automatic config_pkg::cva6_cfg_t build_fpga_config(config_pkg::cva6_user_cfg_t CVA6UserCfg);
@@ -935,7 +939,12 @@ ariane #(
         .rst_ni            (ndmreset_n),
         .valid_i           (!encap_fifo_empty),
         .encap_fifo_entry_i(encap_fifo_entry_o),
+`ifdef AXKU5
+        // For AXKU5, DPTI is disabled; never backpressure the slicer.
+        .fifo_full_i       (1'b0),
+`else
         .fifo_full_i       (usrFull), // usrFull DPTI
+`endif
         .valid_o           (valid_slice),
         .slice_o           (slice),
         .done_o            (encap_fifo_pop)
@@ -1012,67 +1021,69 @@ end else begin
         .rdata_o ( rom_rdata )
     );
 end
-// ---------------
-// DPTI
-// ---------------
+ // ---------------
+ // DPTI
+ // ---------------
 
-logic FifoEn ;
-logic usrFull ;
-logic usrEmpty ;
-logic [7:0] w_data;
-logic [7:0] r_data;
+`ifndef AXKU5
+ logic FifoEn ;
+ logic usrFull ;
+ logic usrEmpty ;
+ logic [7:0] w_data;
+ logic [7:0] r_data;
 
-logic [11:0] w_count;
-logic [11:0] r_count;
+ logic [11:0] w_count;
+ logic [11:0] r_count;
 
-logic prog_rxen_debug;
-logic prog_txen_debug;
-logic prog_spien_debug;
-logic prog_rdn_debug;
-logic prog_wrn_debug;
-logic prog_oen_debug;
-logic prog_siwun_debug;
+ logic prog_rxen_debug;
+ logic prog_txen_debug;
+ logic prog_spien_debug;
+ logic prog_rdn_debug;
+ logic prog_wrn_debug;
+ logic prog_oen_debug;
+ logic prog_siwun_debug;
 
-assign prog_rxen_debug = prog_rxen;
-assign prog_txen_debug = prog_txen;
-assign prog_spien_debug = prog_spien;
-assign prog_rdn_debug = prog_rdn;
-assign prog_wrn_debug = prog_wrn;
-assign prog_oen_debug = prog_oen;
-assign prog_siwun_debug = prog_siwun;
+ assign prog_rxen_debug = prog_rxen;
+ assign prog_txen_debug = prog_txen;
+ assign prog_spien_debug = prog_spien;
+ assign prog_rdn_debug = prog_rdn;
+ assign prog_wrn_debug = prog_wrn;
+ assign prog_oen_debug = prog_oen;
+ assign prog_siwun_debug = prog_siwun;
 
-//assign  w_data = {iti_to_encoder.itype[0],iti_to_encoder.itype[1],iti_to_encoder.valid} ;
+ //assign  w_data = {iti_to_encoder.itype[0],iti_to_encoder.itype[1],iti_to_encoder.valid} ;
 
-assign FifoEn = !usrFull && !usrEmpty;
- dpti_ctrl i_dpti_ctrl (
-          .wr_clk (clk),
-          .wr_en  (valid_slice),
-          .wr_full(usrFull),
-          .wr_afull(),
-          .wr_err(),
-          .wr_count(w_count),
-          .wr_di(slice),
+ assign FifoEn = !usrFull && !usrEmpty;
+  dpti_ctrl i_dpti_ctrl (
+           .wr_clk (clk),
+           .wr_en  (valid_slice),
+           .wr_full(usrFull),
+           .wr_afull(),
+           .wr_err(),
+           .wr_count(w_count),
+           .wr_di(slice),
 
-          .rd_clk(clk),
-          .rd_en(FifoEn),
-          .rd_empty(usrEmpty),
-          .rd_aempty(),
-          .rd_err (),
-          .rd_count(r_count),
-          .rd_do(r_data),
+           .rd_clk(clk),
+           .rd_en(FifoEn),
+           .rd_empty(usrEmpty),
+           .rd_aempty(),
+           .rd_err (),
+           .rd_count(r_count),
+           .rd_do(r_data),
 
-          .rst(rst),
+           .rst(rst),
 
-          .prog_clko(prog_clko),
-          .prog_rxen(prog_rxen),
-          .prog_txen(prog_txen),
-          .prog_spien('0),
-          .prog_rdn(prog_rdn),
-          .prog_wrn(prog_wrn),
-          .prog_oen(prog_oen),
-          .prog_siwun(prog_siwun),
-          .prog_d(prog_d)
-);
+           .prog_clko(prog_clko),
+           .prog_rxen(prog_rxen),
+           .prog_txen(prog_txen),
+           .prog_spien('0),
+           .prog_rdn(prog_rdn),
+           .prog_wrn(prog_wrn),
+           .prog_oen(prog_oen),
+           .prog_siwun(prog_siwun),
+           .prog_d(prog_d)
+ );
+`endif
 // ---------------
 // Peripherals
 // ---------------
@@ -1082,6 +1093,19 @@ assign FifoEn = !usrFull && !usrEmpty;
 `endif
 
 logic clk_200MHz_ref;
+
+`ifdef AXKU5
+// Internal Ethernet signals for AXKU5 (no external PHY pins)
+logic         eth_txck, eth_rxck, eth_rxctl, eth_rst_n, eth_txctl, eth_mdio, eth_mdc;
+logic [3:0]   eth_rxd,  eth_txd;
+
+// AXKU5: internal 8-bit LED bus; only lower 4 bits are routed to board LEDs.
+logic [7:0]   led_int;
+
+// AXKU5: internal 8-bit switch bus; pad upper bits with zeros, map lower bits to keys.
+logic [7:0]   sw_int;
+assign sw_int = {5'b00000, sw};
+`endif
 
 ariane_peripherals #(
     .AxiAddrWidth ( AxiAddrWidth     ),
@@ -1101,6 +1125,9 @@ ariane_peripherals #(
     .InclEthernet ( 1'b0         )
     `elsif VCU118
     .InclSPI      ( 1'b0         ),
+    .InclEthernet ( 1'b0         )
+    `elsif AXKU5
+    .InclSPI      ( 1'b1         ),
     .InclEthernet ( 1'b0         )
     `elsif NEXYS_VIDEO
     .InclSPI      ( 1'b1         ),
@@ -1138,11 +1165,26 @@ ariane_peripherals #(
     `ifdef KC705
       .leds_o         ( {led[3:0], unused_led[7:4]}),
       .dip_switches_i ( {sw, unused_switches}     )
+    `elsif AXKU5
+      .leds_o         ( led_int                   ),
+      .dip_switches_i ( sw_int                    )
     `else
       .leds_o         ( led                       ),
       .dip_switches_i ( sw                        )
     `endif
-);
+ );
+
+`ifdef AXKU5
+  // AXKU5: map board LEDs to internal + debug signals for bring-up:
+  //   LED0 (J12) : led_int[0]      – SoC-controlled “alive” indicator
+  //   LED1 (H14) : debug_req_irq   – DM halt request to core
+  //   LED2 (F13) : ~ndmreset_n     – debug reset active
+  //   LED3 (H12) : dmactive        – debug module active
+  assign led[0] = led_int[0];
+  assign led[1] = debug_req_irq;
+  assign led[2] = ~ndmreset_n;
+  assign led[3] = dmactive;
+`endif
 
 
 // ---------------------
@@ -1301,7 +1343,7 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_arsize   ( dram.ar_size     ),
   .s_axi_arburst  ( dram.ar_burst    ),
   .s_axi_arlock   ( dram.ar_lock     ),
-  .s_axi_arcache  ( dram.arcache     ),
+  .s_axi_arcache  ( dram.ar_cache    ),
   .s_axi_arprot   ( dram.ar_prot     ),
   .s_axi_arregion ( dram.ar_region   ),
   .s_axi_arqos    ( dram.ar_qos      ),
@@ -1360,7 +1402,7 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
 // -----------------------------------------------------------------------------
 // AXKU5: BRAM-backed "DRAM" in core clock domain
 // -----------------------------------------------------------------------------
-localparam int unsigned AXKU5_DRAM_WORDS = 2**18; // 2 MiB @ 64-bit
+localparam int unsigned AXKU5_DRAM_WORDS = 2**16; // 512 KiB @ 64-bit
 localparam int unsigned AXKU5_DRAM_AW    = $clog2(AXKU5_DRAM_WORDS);
 
 logic                      axku5_mem_req;
@@ -1393,52 +1435,95 @@ logic [AXKU5_DRAM_AW-1:0]  axku5_mem_idx;
 // Use word-aligned addressing (ignore upper bits beyond implemented range)
 assign axku5_mem_idx = axku5_mem_addr[AXKU5_DRAM_AW+2:3];
 
-always_ff @(posedge clk or negedge ndmreset_n) begin
+always_ff @(posedge clk) begin
+  // Do not reset the memory array; that would prevent BRAM inference.
+  // Only reset the read-data register.
   if (!ndmreset_n) begin
     axku5_mem_rdata <= '0;
-  end else if (axku5_mem_req) begin
-    if (axku5_mem_we) begin
-      for (int i = 0; i < AxiDataWidth/8; i++) begin
-        if (axku5_mem_be[i]) begin
-          axku5_dram_mem[axku5_mem_idx][8*i +: 8] <= axku5_mem_wdata[8*i +: 8];
+  end else begin
+    if (axku5_mem_req) begin
+      if (axku5_mem_we) begin
+        // Write with byte enables
+        for (int i = 0; i < AxiDataWidth/8; i++) begin
+          if (axku5_mem_be[i]) begin
+            axku5_dram_mem[axku5_mem_idx][8*i +: 8] <= axku5_mem_wdata[8*i +: 8];
+          end
         end
+      end else begin
+        // Read
+        axku5_mem_rdata <= axku5_dram_mem[axku5_mem_idx];
       end
     end
-    axku5_mem_rdata <= axku5_dram_mem[axku5_mem_idx];
   end
 end
 `endif
 
 `ifdef AXKU5
 // -----------------------------------------------------------------------------
-// AXKU5 clocking:
-// - Buffer external differential system clock.
-// - Use buffered clock directly as core / peripheral clock.
-// - No external MIG UI clock; DRAM is BRAM in core clock domain.
+// AXKU5 clocking (reference-style):
+// - Differential 200 MHz input clock from board.
+// - PLLE2 generates a ~50 MHz core clock (as in ara_fpga_wrap).
+// - Core/peripherals/BRAM "DRAM" all run from this 50 MHz core clock.
 // -----------------------------------------------------------------------------
-logic sys_clk_ibuf;
+// 200 MHz input from board (see axku5.xdc: create_clock -period 5.000)
+logic clk_in_200;
+logic clk_in_200_buf;
+
+// PLL: 200 MHz -> 1 GHz (VCO) -> 50 MHz (CLKOUT0)
+logic core_clk_raw;
+logic pll_clkfb;
+logic pll_locked_int;
 
 IBUFDS i_axku5_sys_clk_ibufds (
   .I  ( sys_clk_p ),
   .IB ( sys_clk_n ),
-  .O  ( sys_clk_ibuf )
+  .O  ( clk_in_200 )
 );
 
+BUFG i_axku5_clk200_bufg (
+  .I ( clk_in_200 ),
+  .O ( clk_in_200_buf )
+);
+
+PLLE2_BASE #(
+  .BANDWIDTH("OPTIMIZED"),
+  .CLKFBOUT_MULT(5),    // 200 MHz * 5 = 1000 MHz VCO
+  .CLKIN1_PERIOD(5.0),  // 200 MHz input
+  .CLKOUT0_DIVIDE(20),  // 1000 MHz / 20 = 50 MHz core clock
+  .DIVCLK_DIVIDE(1),
+  .STARTUP_WAIT("FALSE")
+) i_axku5_pll (
+  .CLKOUT0 ( core_clk_raw ),
+  .CLKOUT1 (              ),
+  .CLKOUT2 (              ),
+  .CLKOUT3 (              ),
+  .CLKOUT4 (              ),
+  .CLKOUT5 (              ),
+  .CLKFBOUT( pll_clkfb    ),
+  .LOCKED  ( pll_locked_int ),
+  .CLKIN1  ( clk_in_200_buf ),
+  .PWRDWN  ( 1'b0         ),
+  .RST     ( 1'b0         ),
+  .CLKFBIN ( pll_clkfb    )
+);
+
+// Global buffer for core clock (50 MHz)
 BUFG i_axku5_core_clk_bufg (
-  .I ( sys_clk_ibuf ),
+  .I ( core_clk_raw ),
   .O ( clk )
 );
 
-// Single clock domain for core, DRAM BRAM, and peripherals.
+// Single 50 MHz clock domain for core, DRAM BRAM, and peripherals.
 assign ddr_clock_out  = clk;
 assign ddr_sync_reset = ~cpu_resetn;
+// Name kept for compatibility; on AXKU5 this is a generic ref clock, not 200 MHz.
 assign clk_200MHz_ref = clk;
 assign phy_tx_clk     = clk;
 assign eth_clk        = clk;
 assign sd_clk_sys     = clk;
 
-// Treat clock as "locked" once board reset is released.
-assign pll_locked = cpu_resetn;
+// Use actual PLL lock signal for rstgen.
+assign pll_locked = pll_locked_int;
 
 `else
 

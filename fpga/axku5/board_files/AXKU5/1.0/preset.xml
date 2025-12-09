@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ip_preset schema_version="2.0">
+    <ip_presets>
+
+        <!-- Example preset for user LEDs using AXI GPIO -->
+        <ip_preset name="axku5_user_leds_axi_gpio"
+                   display_name="AXKU5 User LEDs (AXI GPIO)">
+            <ip vendor="xilinx.com" library="ip" name="axi_gpio" version="2.0"/>
+            <parameters>
+                <parameter name="C_GPIO_WIDTH" value="4"/>
+                <parameter name="C_ALL_OUTPUTS" value="1"/>
+            </parameters>
+        </ip_preset>
+
+    </ip_presets>
+</ip_preset>

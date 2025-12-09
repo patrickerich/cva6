@@ -27,13 +27,20 @@ lassign $argv mcsfile bitfile
 # https://scholar.princeton.edu/jbalkind/blog/programming-genesys-2-qspi-spi-x4-flash
 # https://scholar.princeton.edu/jbalkind/blog/programming-vc707-virtex-7-bpi-flash
 if {$::env(BOARD) eq "genesys2"} {
+    # Genesys-2: 256 Mbit QSPI, SPIx4
     write_cfgmem -format mcs -interface SPIx4 -size 256  -loadbit "up 0x0 $bitfile" -file $mcsfile -force
 } elseif {$::env(BOARD) eq "vc707"} {
+    # VC707: 128 Mbit BPIx16
     write_cfgmem -format mcs -interface bpix16 -size 128 -loadbit "up 0x0 $bitfile" -file $mcsfile -force
 } elseif {$::env(BOARD) eq "kc705"} {
+    # KC705: 128 Mbit QSPI, SPIx4
     write_cfgmem -format mcs -interface SPIx4 -size 128  -loadbit "up 0x0 $bitfile" -file $mcsfile -force
 } elseif {$::env(BOARD) eq "nexys_video"} {
+    # Nexys Video: 256 Mbit QSPI, SPIx4
+    write_cfgmem -format mcs -interface SPIx4 -size 256  -loadbit "up 0x0 $bitfile" -file $mcsfile -force
+} elseif {$::env(BOARD) eq "axku5"} {
+    # AXKU5: MT25QU256 (256 Mbit) QSPI flash, SPIx4
     write_cfgmem -format mcs -interface SPIx4 -size 256  -loadbit "up 0x0 $bitfile" -file $mcsfile -force
 } else {
-      exit 1
+    exit 1
 }
