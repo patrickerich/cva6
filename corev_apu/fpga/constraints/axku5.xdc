@@ -28,7 +28,7 @@ create_clock -period 5.000 -name sys_clk_pin [get_ports sys_clk_p]
 
 set_property PACKAGE_PIN K22 [get_ports sys_clk_p]
 set_property PACKAGE_PIN K23 [get_ports sys_clk_n]
-set_property IOSTANDARD DIFF_SSTL12 [get_ports {sys_clk_p sys_clk_n}]
+set_property IOSTANDARD LVDS [get_ports {sys_clk_p sys_clk_n}]
 
 # Optional jitter model
 # set_input_jitter [get_clocks sys_clk_pin] 0.050
