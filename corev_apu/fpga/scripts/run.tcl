@@ -125,6 +125,13 @@ report_clock_interaction                                                -file re
 set_property "steps.place_design.args.directive" "RuntimeOptimized" [get_runs impl_1]
 set_property "steps.route_design.args.directive" "RuntimeOptimized" [get_runs impl_1]
 
+# For boards that use QSPI in x4 mode (Genesys2, KC705, Nexys Video, AXKU5),
+# ensure the generated bitstream has BITSTREAM.CONFIG.SPI_BUSWIDTH set to 4.
+# This is required so that write_cfgmem can later create an MCS with -interface SPIx4.
+if {$::env(BOARD) eq "genesys2" || $::env(BOARD) eq "kc705" || $::env(BOARD) eq "nexys_video" || $::env(BOARD) eq "axku5"} {
+  set_property STEPS.WRITE_BITSTREAM.ARGS.BITSTREAM.CONFIG.SPI_BUSWIDTH 4 [get_runs impl_1]
+}
+
 launch_runs impl_1
 wait_on_run impl_1
 launch_runs impl_1 -to_step write_bitstream
@@ -143,3 +150,7 @@ check_timing                                                              -file 
 report_timing -max_paths 100 -nworst 100 -delay_type max -sort_by slack   -file reports/${project}.timing_WORST_100.rpt
 report_timing -nworst 1 -delay_type max -sort_by group                    -file reports/${project}.timing.rpt
 report_utilization -hierarchical                                          -file reports/${project}.utilization.rpt
+
+# Persist the project state so that synthesis/implementation runs and reports
+# are visible and linked when opening ariane.xpr in the Vivado GUI.
+save_project

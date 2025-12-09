@@ -33,7 +33,10 @@ all: $(mcs)
 $(mcs): $(bit)
 	$(VIVADO) $(VIVADOFLAGS) -source scripts/write_cfgmem.tcl -tclargs $@ $^
 
-$(bit): $(ips)
+# Rebuild the bitstream whenever IPs or the build scripts change, so that
+# properties like BITSTREAM.CONFIG.SPI_BUSWIDTH (set in run.tcl) are correctly
+# reflected in the generated .bit file.
+$(bit): $(ips) scripts/run.tcl scripts/prologue.tcl
 	mkdir -p $(work-dir)
 	$(VIVADO) $(VIVADOFLAGS) -source scripts/run.tcl
 	cp ariane.runs/impl_1/ariane_xilinx* ./$(work-dir)
